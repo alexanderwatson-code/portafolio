@@ -8,14 +8,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles/main.css?v=4">
+<link rel="stylesheet" href="styles/main.css?v=6">
 </head>
 <body>
 
-<audio data-sfx="key"   preload="auto"></audio>
-<audio data-sfx="enter" preload="auto"></audio>
-<audio data-sfx="login" preload="auto"></audio>
-<audio data-sfx="error" preload="auto"></audio>
+<audio data-sfx="reveal" preload="auto"></audio>
+<audio data-sfx="click"  preload="auto"></audio>
 
 <main class="term-window">
     <div class="term-titlebar">
@@ -28,34 +26,24 @@
     <div class="term-body" id="term-body">
         <div id="boot"></div>
 
-        <form id="login-form" autocomplete="off">
-            <p class="line dim">awportfolio login:</p>
-            <div class="row">
-                <input id="login-user" type="text" value="alexander" readonly aria-label="Usuario">
-            </div>
-            <p class="line dim">Password:</p>
-            <div class="row">
-                <input id="login-pass" type="password" enterkeyhint="go" aria-label="Contraseña" placeholder="(cualquier cosa funciona)">
-            </div>
-        </form>
-
-        <div class="term-inputline hidden"></div>
-        <template id="input-line-tpl"></template>
+        <div id="dashboard" class="dashboard hidden">
+            <div class="hero-card" id="hero-card"></div>
+            <div class="card-grid" id="card-grid"></div>
+        </div>
     </div>
 
-    <!-- Para quien prefiere tocar en vez de escribir -->
-    <nav class="quick-bar hidden" id="quick-bar" aria-label="Comandos rápidos">
-        <button type="button" data-cmd="neofetch">neofetch</button>
-        <button type="button" data-cmd="about">about</button>
-        <button type="button" data-cmd="projects">projects</button>
-        <button type="button" data-cmd="certifications">certifications</button>
-        <button type="button" data-cmd="skills">skills</button>
-        <button type="button" data-cmd="contact">contact</button>
-        <button type="button" data-cmd="resume">resume</button>
-        <button type="button" data-cmd="help">help</button>
+    <!-- Navegación por clic: salta a cada tarjeta, sin escribir nada -->
+    <nav class="quick-bar hidden" id="quick-bar" aria-label="Navegación rápida">
+        <button type="button" data-action="about">about</button>
+        <button type="button" data-action="skills">skills</button>
+        <button type="button" data-action="certifications">certifications</button>
+        <button type="button" data-action="projects">projects</button>
+        <button type="button" data-action="contact">contact</button>
+        <button type="button" data-action="resume">resume</button>
+        <button type="button" data-action="reboot">reiniciar</button>
     </nav>
 </main>
 
-<script src="scripts/main.js?v=4"></script>
+<script src="scripts/main.js?v=6"></script>
 </body>
 </html>
