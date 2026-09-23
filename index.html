@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Portafolio de Alexander Watson en formato de terminal Linux: soporte TI, redes y ciberseguridad.">
+<title>alexander@awportfolio: ~</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/main.css?v=4">
+</head>
+<body>
+
+<audio data-sfx="key"   preload="auto"></audio>
+<audio data-sfx="enter" preload="auto"></audio>
+<audio data-sfx="login" preload="auto"></audio>
+<audio data-sfx="error" preload="auto"></audio>
+
+<main class="term-window">
+    <div class="term-titlebar">
+        <span class="dot red"></span>
+        <span class="dot yellow"></span>
+        <span class="dot green"></span>
+        <p class="term-title">alexander@awportfolio: ~</p>
+    </div>
+
+    <div class="term-body" id="term-body">
+        <div id="boot"></div>
+
+        <form id="login-form" autocomplete="off">
+            <p class="line dim">awportfolio login:</p>
+            <div class="row">
+                <input id="login-user" type="text" value="alexander" readonly aria-label="Usuario">
+            </div>
+            <p class="line dim">Password:</p>
+            <div class="row">
+                <input id="login-pass" type="password" enterkeyhint="go" aria-label="Contraseña" placeholder="(cualquier cosa funciona)">
+            </div>
+        </form>
+
+        <div class="term-inputline hidden"></div>
+        <template id="input-line-tpl"></template>
+    </div>
+
+    <!-- Para quien prefiere tocar en vez de escribir -->
+    <nav class="quick-bar hidden" id="quick-bar" aria-label="Comandos rápidos">
+        <button type="button" data-cmd="neofetch">neofetch</button>
+        <button type="button" data-cmd="about">about</button>
+        <button type="button" data-cmd="projects">projects</button>
+        <button type="button" data-cmd="certifications">certifications</button>
+        <button type="button" data-cmd="skills">skills</button>
+        <button type="button" data-cmd="contact">contact</button>
+        <button type="button" data-cmd="resume">resume</button>
+        <button type="button" data-cmd="help">help</button>
+    </nav>
+</main>
+
+<script src="scripts/main.js?v=4"></script>
+</body>
+</html>
