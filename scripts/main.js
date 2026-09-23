@@ -1,5 +1,6 @@
 /* Portafolio terminal — Alexander Watson
-   Todo el contenido editable vive en el objeto DATA de más abajo. */
+   Todo el contenido editable vive en el objeto DATA de más abajo.
+   Interacción: solo clics — no hay comandos ni claves que escribir. */
 
 (function () {
     'use strict';
@@ -73,21 +74,12 @@
             'ubicacion Lima, Peru'
         ],
         /* Pon aqui el nombre real de tu PDF cuando lo subas al repo,
-           por ejemplo "cv/Alexander_Watson.pdf". Vacio = deshabilitado. */
+           por ejemplo "cv/Alexander_Watson.pdf". Vacio = boton deshabilitado. */
         resumePath: ''
     };
 
-    var FILES = {
-        'about.txt':          DATA.about.join('\n'),
-        'skills.txt':         DATA.skills.join('\n'),
-        'certifications.txt': DATA.certifications.map(function (c) {
-            return '[' + c.year + '] ' + c.name + ' — ' + c.org + (c.pdf ? ' (PDF disponible)' : '');
-        }).join('\n'),
-        'contact.txt':        DATA.contact.join('\n')
-    };
-
     /* ============================================================
-       Utilidades de sonido (mismos ganchos que en el otro portafolio) 
+       Utilidades
        ============================================================ */
     function playSfx(name) {
         var el = document.querySelector('audio[data-sfx="' + name + '"]');
@@ -97,25 +89,32 @@
         }
     }
 
+    function escapeHtml(s) {
+        var d = document.createElement('div');
+        d.textContent = s;
+        return d.innerHTML;
+    }
+
     /* ============================================================
-       Secuencia de arranque
+       Elementos
        ============================================================ */
     var bootEl = document.getElementById('boot');
-    var loginForm = document.getElementById('login-form');
-    var loginUser = document.getElementById('login-user');
-    var loginPass = document.getElementById('login-pass');
-    var termWindow = document.querySelector('.term-window');
-    var termBody = document.getElementById('term-body');
+    var dashboard = document.getElementById('dashboard');
+    var heroCard = document.getElementById('hero-card');
+    var cardGrid = document.getElementById('card-grid');
     var quickBar = document.getElementById('quick-bar');
 
+    /* ============================================================
+       Secuencia de arranque — solo mensajes de sistema, nada que
+       requiera escribir ni ninguna clave.
+       ============================================================ */
     var BOOT_LINES = [
         ['[    0.000000] ', 'k-dim', 'Booting AlexanderOS 6.6.0-portfolio'],
         ['[    0.041823] ', 'k-dim', 'Loading modules: red, ciberseguridad, raspberrypi ... ', 'k-ok', 'OK'],
         ['[    0.183021] ', 'k-dim', 'Mounting /home/' + USER + ' ... ', 'k-ok', 'OK'],
         ['[    0.512077] ', 'k-dim', 'Starting network manager ... ', 'k-ok', 'OK'],
-        ['[    0.734410] ', 'k-dim', 'Starting sshd ... ', 'k-ok', 'OK'],
-        ['[    0.921003] ', 'k-dim', 'Starting portfolio.service ... ', 'k-ok', 'OK'],
-        ['[    1.055120] ', 'k-dim', HOST + ' login']
+        ['[    0.734410] ', 'k-dim', 'Starting portfolio.service ... ', 'k-ok', 'OK'],
+        ['[    0.921003] ', 'k-dim', 'Acceso automatico como ' + USER + ' ... ', 'k-ok', 'OK']
     ];
 
     function renderBootLine(parts) {
@@ -133,342 +132,27 @@
     function runBoot() {
         if (reduced) {
             BOOT_LINES.forEach(renderBootLine);
-            showLogin();
+            revealAll();
             return;
         }
         var i = 0;
         (function step() {
-            if (i >= BOOT_LINES.length) { showLogin(); return; }
+            if (i >= BOOT_LINES.length) {
+                setTimeout(revealAll, 200);
+                return;
+            }
             renderBootLine(BOOT_LINES[i]);
             i++;
             setTimeout(step, 90 + Math.random() * 120);
         })();
     }
 
-    function showLogin() {
-        loginForm.style.display = 'block';
-        loginUser.focus();
-    }
-
-    document.addEventListener('keydown', function (e) {
-        if (loginForm.style.display !== 'block') return;
-        if (e.key !== 'Enter') return;
-
-        if (document.activeElement === loginUser) {
-            e.preventDefault();
-            loginPass.focus();
-        } else if (document.activeElement === loginPass) {
-            e.preventDefault();
-            finishLogin();
-        }
-    });
-
-    /* Red de seguridad para móvil: si el teclado no dispara un "Enter"
-       normal, el submit del <form> sí se dispara siempre. */
-    loginForm.addEventListener('submit', function (e) {
-        e.preventDefault();
-        if (document.activeElement === loginUser) {
-            loginPass.focus();
-        } else {
-            finishLogin();
-        }
-    });
-
-    function finishLogin() {
-        loginForm.style.display = 'none';
-        var p1 = document.createElement('p');
-        p1.className = 'line dim';
-        var now = new Date();
-        p1.textContent = 'Last login: ' + now.toDateString() + ' ' +
-            now.toTimeString().slice(0, 8) + ' from 190.24.x.x';
-        bootEl.appendChild(p1);
-
-        playSfx('login');
-        startTerminal();
-    }
-
     /* ============================================================
-       Terminal interactiva
+       Panel de presentación: hero (neofetch) + tarjetas.
+       Se revela solo, automáticamente, sin ninguna interacción.
        ============================================================ */
-    var cwd = '~';
-    var history = [];
-    var histIndex = -1;
-    var inputLineTpl = document.getElementById('input-line-tpl');
-    var currentInput = null;
 
-    function promptHtml() {
-        return '<span class="prompt">' + USER + '@' + HOST +
-            '<span class="sep">:</span><span class="path">' + cwd +
-            '</span><span class="sep">$</span> </span>';
-    }
-
-    function print(text, cls) {
-        var p = document.createElement('p');
-        p.className = 'line ' + (cls || 'out');
-        p.textContent = text;
-        termBody.insertBefore(p, document.querySelector('.term-inputline'));
-    }
-
-    function printHTML(html, cls) {
-        var p = document.createElement('p');
-        p.className = 'line ' + (cls || 'out');
-        p.innerHTML = html;
-        termBody.insertBefore(p, document.querySelector('.term-inputline'));
-    }
-
-    function printBlock(lines, cls) {
-        lines.forEach(function (l) { print(l, cls); });
-    }
-
-    function scrollToBottom() {
-        termBody.scrollTop = termBody.scrollHeight;
-    }
-
-    function startTerminal() {
-        termWindow.querySelector('.term-inputline').classList.remove('hidden');
-        quickBar.classList.remove('hidden');
-
-        /* Lo primero que ve la visita es el panel visual, sin tener que
-           escribir nada — resuelve el caso de alguien que no sabe qué
-           comandos existen. */
-        cmdNeofetch();
-        print('Escribe un comando o toca uno de los botones de abajo.', 'dim');
-
-        spawnInput();
-    }
-
-    function spawnInput() {
-        var line = document.querySelector('.term-inputline');
-        /* El <form> es lo que hace confiable la tecla Enter/Ir del teclado
-           virtual en Android e iOS: algunos teclados no disparan un evento
-           de tecla normal en un <input> suelto, pero SIEMPRE disparan
-           "submit" si está dentro de un form. */
-        line.innerHTML =
-            '<form class="input-form">' + promptHtml() +
-            '<input type="text" autocomplete="off" autocapitalize="off" spellcheck="false" ' +
-            'enterkeyhint="go" aria-label="Comando">' +
-            '<span class="fake-caret"></span></form>';
-
-        var form = line.querySelector('form');
-        currentInput = line.querySelector('input');
-        currentInput.focus();
-
-        form.addEventListener('submit', function (e) {
-            e.preventDefault();
-            commit(currentInput.value);
-        });
-
-        currentInput.addEventListener('keydown', onKeydown);
-        currentInput.addEventListener('input', function () { playSfx('key'); });
-
-        /* En celular, cuando aparece el teclado, aseguramos que la línea
-           de entrada quede visible en vez de tapada. */
-        currentInput.addEventListener('focus', function () {
-            setTimeout(scrollToBottom, 250);
-        });
-        if (window.visualViewport) {
-            window.visualViewport.addEventListener('resize', scrollToBottom);
-        }
-
-        termBody.addEventListener('click', function () { currentInput.focus(); });
-    }
-
-    function onKeydown(e) {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            var val = currentInput.value;
-            commit(val);
-        } else if (e.key === 'ArrowUp') {
-            e.preventDefault();
-            if (histIndex > 0) { histIndex--; currentInput.value = history[histIndex]; }
-        } else if (e.key === 'ArrowDown') {
-            e.preventDefault();
-            if (histIndex < history.length - 1) {
-                histIndex++;
-                currentInput.value = history[histIndex];
-            } else {
-                histIndex = history.length;
-                currentInput.value = '';
-            }
-        }
-    }
-
-    quickBar.addEventListener('click', function (e) {
-        var btn = e.target.closest('button[data-cmd]');
-        if (!btn || !currentInput) return;
-        commit(btn.getAttribute('data-cmd'));
-        currentInput.focus();
-    });
-
-    function commit(raw) {
-        var val = raw.trim();
-
-        var line = document.querySelector('.term-inputline');
-        var frozen = document.createElement('p');
-        frozen.className = 'line cmd';
-        frozen.innerHTML = promptHtml() + escapeHtml(raw);
-        termBody.insertBefore(frozen, line);
-
-        if (val) { history.push(val); }
-        histIndex = history.length;
-
-        playSfx('enter');
-        runCommand(val);
-        currentInput.value = '';
-        scrollToBottom();
-    }
-
-    function escapeHtml(s) {
-        var d = document.createElement('div');
-        d.textContent = s;
-        return d.innerHTML;
-    }
-
-    /* ---------- comandos ---------- */
-
-    function runCommand(raw) {
-        if (!raw) return;
-        var parts = raw.split(/\s+/);
-        var cmd = parts[0].toLowerCase();
-        var args = parts.slice(1);
-
-        switch (cmd) {
-            case 'help':        return cmdHelp();
-            case 'whoami':      return print(USER);
-            case 'about':       return printBlock(DATA.about);
-            case 'skills':      return printBlock(DATA.skills);
-            case 'certifications':
-            case 'certs':       return cmdCertifications();
-            case 'projects':    return cmdProjects();
-            case 'contact':     return cmdContact();
-            case 'neofetch':    return cmdNeofetch();
-            case 'ls':          return cmdLs(args[0]);
-            case 'cat':         return cmdCat(args[0]);
-            case 'resume':
-            case 'cv':          return cmdResume();
-            case 'clear':       return cmdClear();
-            case 'history':     return printBlock(history.map(function (h, i) { return (i + 1) + '  ' + h; }));
-            case 'echo':        return print(args.join(' '));
-            case 'date':        return print(new Date().toString());
-            case 'pwd':         return print('/home/' + USER);
-            case 'sudo':        return cmdSudo(args);
-            case 'exit':
-            case 'logout':      return cmdExit();
-            default:
-                print(cmd + ': comando no encontrado. Escribe "help" para ver la lista.', 'err');
-        }
-    }
-
-    function cmdHelp() {
-        printBlock([
-            'Comandos disponibles:',
-            '',
-            '  help              esta ayuda',
-            '  whoami            usuario actual',
-            '  neofetch          panel de specs',
-            '  about             quien soy',
-            '  skills            tecnologias',
-            '  projects          detalle de proyectos',
-            '  certifications    certificados',
-            '  contact           datos de contacto',
-            '  ls [carpeta]      listar archivos',
-            '  cat <archivo>     ver contenido de un archivo',
-            '  resume            descargar CV',
-            '  history           comandos anteriores',
-            '  clear             limpiar pantalla',
-            '  exit              cerrar sesion'
-        ]);
-    }
-
-    function cmdCertifications() {
-        DATA.certifications.forEach(function (c) {
-            var line = '[' + c.year + '] ' + c.name + ' — ' + c.org;
-            if (c.pdf) {
-                printHTML(
-                    escapeHtml(line) + '  <a href="' + c.pdf + '" target="_blank" rel="noopener">[ver PDF]</a>',
-                    'link'
-                );
-            } else {
-                print(line);
-            }
-        });
-    }
-
-    function cmdProjects() {
-        DATA.projects.forEach(function (p) {
-            printHTML('<span style="color:var(--accent-2)">' + p.name + '/</span>');
-            print('  ' + p.desc);
-            print('  ' + p.desc2);
-            print('');
-        });
-    }
-
-    function cmdContact() {
-        printBlock(DATA.contact);
-        printHTML(
-            '<a href="mailto:alexanderwh1703@gmail.com">escribir un correo</a>',
-            'link'
-        );
-    }
-
-    function cmdLs(dir) {
-        if (dir === 'projects' || dir === 'projects/') {
-            printBlock(DATA.projects.map(function (p) { return p.name + '/'; }));
-            return;
-        }
-        var items = ['about.txt', 'skills.txt', 'certifications.txt', 'contact.txt', 'projects/'];
-        if (DATA.resumePath) items.push('resume.pdf');
-        printBlock(items);
-    }
-
-    function cmdCat(file) {
-        if (!file) { print('cat: falta el nombre del archivo', 'err'); return; }
-        if (FILES[file]) {
-            printBlock(FILES[file].split('\n'));
-        } else {
-            print('cat: ' + file + ': archivo no encontrado', 'err');
-        }
-    }
-
-    function cmdResume() {
-        if (!DATA.resumePath) {
-            print('resume: todavia no hay un PDF conectado a este comando.', 'warn');
-            print('(Alexander: pon la ruta en DATA.resumePath dentro de main.js)', 'dim');
-            return;
-        }
-        print('Descargando resume.pdf ...', 'accent');
-        var a = document.createElement('a');
-        a.href = DATA.resumePath;
-        a.download = '';
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-    }
-
-    function cmdClear() {
-        var lines = termBody.querySelectorAll('.line');
-        lines.forEach(function (l) { l.remove(); });
-    }
-
-    function cmdSudo(args) {
-        playSfx('error');
-        print('[sudo] password for ' + USER + ':', 'dim');
-        print(USER + ' is not in the sudoers file. This incident will be reported.', 'err');
-    }
-
-    function cmdExit() {
-        print('logout', 'dim');
-        setTimeout(function () {
-            termWindow.querySelector('.term-inputline').classList.add('hidden');
-            quickBar.classList.add('hidden');
-            var lines = termBody.querySelectorAll('.line');
-            lines.forEach(function (l) { l.remove(); });
-            bootEl.innerHTML = '';
-            runBoot();
-        }, 500);
-    }
-
-    function cmdNeofetch() {
+    function neofetchHTML() {
         var logo = [
             '      .--.      ',
             '     |o_o |     ',
@@ -479,24 +163,6 @@
             '  \\___)=(___/   '
         ].join('\n');
 
-        var uptimeYears = '4+ anos';
-        var html =
-            '<div class="neofetch">' +
-                '<pre class="logo">' + escapeHtml(logo) + '</pre>' +
-                '<div class="specs">' +
-                    row('OS', 'AlexanderOS 6.6.0-portfolio') +
-                    row('Host', HOST) +
-                    row('Uptime', uptimeYears + ' en TI y datos') +
-                    row('Shell', 'bash 5.2') +
-                    row('Estudios', 'Ciberseguridad, ISIL') +
-                    row('Certs', DATA.certifications.length + ' instaladas') +
-                    row('Skills', 'Linux, Redes, Seguridad, Raspberry Pi') +
-                    row('Contact', 'alexanderwh1703@gmail.com') +
-                    '<div class="swatches">' + swatches() + '</div>' +
-                '</div>' +
-            '</div>';
-        printHTML(html);
-
         function row(k, v) {
             return '<p class="row"><span class="k">' + k + '</span>: ' + v + '</p>';
         }
@@ -506,6 +172,130 @@
                 return '<span style="background:' + c + '"></span>';
             }).join('');
         }
+
+        return '<div class="neofetch">' +
+                '<pre class="logo">' + escapeHtml(logo) + '</pre>' +
+                '<div class="specs">' +
+                    row('OS', 'AlexanderOS 6.6.0-portfolio') +
+                    row('Host', HOST) +
+                    row('Uptime', '4+ anos en TI y datos') +
+                    row('Estudios', 'Ciberseguridad, ISIL') +
+                    row('Certs', DATA.certifications.length + ' instaladas') +
+                    row('Skills', 'Linux, Redes, Seguridad, Raspberry Pi') +
+                    row('Contact', 'alexanderwh1703@gmail.com') +
+                    '<div class="swatches">' + swatches() + '</div>' +
+                '</div>' +
+            '</div>';
+    }
+
+    function certsCardHTML() {
+        return DATA.certifications.map(function (c) {
+            var line = '[' + c.year + '] ' + c.name + ' — ' + c.org;
+            var link = c.pdf
+                ? ' <a href="' + c.pdf + '" target="_blank" rel="noopener">[ver PDF]</a>'
+                : '';
+            return '<p class="row">' + escapeHtml(line) + link + '</p>';
+        }).join('');
+    }
+
+    function projectsCardHTML() {
+        return DATA.projects.map(function (p) {
+            return '<p class="row"><span class="k">' + escapeHtml(p.name) + '/</span></p>' +
+                '<p class="row dim-row">' + escapeHtml(p.desc) + '</p>' +
+                '<p class="row dim-row" style="margin-bottom:10px">' + escapeHtml(p.desc2) + '</p>';
+        }).join('');
+    }
+
+    function contactCardHTML() {
+        var rows = DATA.contact.map(function (l) { return '<p class="row">' + escapeHtml(l) + '</p>'; }).join('');
+        var links = '<p class="row"><a href="mailto:alexanderwh1703@gmail.com">escribir un correo</a></p>';
+        if (DATA.resumePath) {
+            links += '<p class="row"><a href="' + DATA.resumePath + '" download>descargar CV</a></p>';
+        }
+        return rows + links;
+    }
+
+    function revealAll() {
+        heroCard.innerHTML = neofetchHTML();
+        cardGrid.innerHTML =
+            card('about', 'about', DATA.about.map(escapeHtml).join('<br>')) +
+            card('skills', 'skills', DATA.skills.map(escapeHtml).join('<br>')) +
+            card('certifications', 'certifications', certsCardHTML()) +
+            card('projects', 'projects', projectsCardHTML(), 'wide') +
+            card('contact', 'contact', contactCardHTML());
+
+        dashboard.classList.remove('hidden');
+        quickBar.classList.remove('hidden');
+        playSfx('reveal');
+
+        if (reduced) {
+            heroCard.classList.add('revealed');
+            cardGrid.querySelectorAll('.card').forEach(function (c) { c.classList.add('revealed'); });
+            return;
+        }
+
+        requestAnimationFrame(function () {
+            setTimeout(function () {
+                heroCard.classList.add('revealed');
+                cardGrid.querySelectorAll('.card').forEach(function (c) { c.classList.add('revealed'); });
+            }, 30);
+        });
+
+        function card(id, label, bodyHtml, extraClass) {
+            return '<section class="card ' + (extraClass || '') + '" id="card-' + id + '">' +
+                '<div class="card-head">' + label + '</div>' +
+                '<div class="card-body">' + bodyHtml + '</div>' +
+                '</section>';
+        }
+    }
+
+    /* ============================================================
+       Barra de navegación: solo clics, salta a cada tarjeta o
+       dispara una acción (descargar CV, reiniciar la animación).
+       ============================================================ */
+    quickBar.addEventListener('click', function (e) {
+        var btn = e.target.closest('button[data-action]');
+        if (!btn) return;
+        var action = btn.getAttribute('data-action');
+        playSfx('click');
+
+        if (action === 'resume') {
+            downloadResume();
+        } else if (action === 'reboot') {
+            rebootSequence();
+        } else {
+            var target = document.getElementById('card-' + action);
+            if (target) target.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+        }
+    });
+
+    function downloadResume() {
+        if (!DATA.resumePath) {
+            var btn = quickBar.querySelector('[data-action="resume"]');
+            if (btn) {
+                var original = btn.textContent;
+                btn.textContent = 'aun no hay CV';
+                setTimeout(function () { btn.textContent = original; }, 1800);
+            }
+            return;
+        }
+        var a = document.createElement('a');
+        a.href = DATA.resumePath;
+        a.download = '';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+    }
+
+    function rebootSequence() {
+        dashboard.classList.add('hidden');
+        quickBar.classList.add('hidden');
+        heroCard.classList.remove('revealed');
+        heroCard.innerHTML = '';
+        cardGrid.innerHTML = '';
+        bootEl.innerHTML = '';
+        window.scrollTo({ top: 0, behavior: 'auto' });
+        runBoot();
     }
 
     /* ============================================================
