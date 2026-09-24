@@ -195,6 +195,7 @@ body {
 .quick-bar::-webkit-scrollbar { height: 6px; }
 .quick-bar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 
+.quick-bar a,
 .quick-bar button {
     flex-shrink: 0;
     font: inherit;
@@ -205,20 +206,31 @@ body {
     border-radius: 999px;
     padding: 7px 14px;
     cursor: pointer;
+    text-decoration: none;
     transition: background .12s ease, color .12s ease, border-color .12s ease;
 }
 
+.quick-bar a::before,
 .quick-bar button::before {
     content: "$ ";
     color: var(--dim);
 }
 
+.quick-bar a:hover,
+.quick-bar a:focus-visible,
 .quick-bar button:hover,
 .quick-bar button:focus-visible {
     background: var(--accent-2);
     color: var(--bg);
     border-color: var(--accent-2);
     outline: none;
+}
+
+.quick-bar a:hover::before,
+.quick-bar a:focus-visible::before,
+.quick-bar button:hover::before,
+.quick-bar button:focus-visible::before {
+    color: var(--bg);
 }
 
 /* Responsive */
