@@ -1,6 +1,7 @@
 /* Portafolio terminal — Alexander Watson
    Todo el contenido editable vive en el objeto DATA de más abajo.
-   Interacción: solo clics — no hay comandos ni claves que escribir. */
+   Cada página (about/projects/certifications/contact) rellena su propia
+   tarjeta a partir de estos mismos datos, así solo hay que editar aquí. */
 
 (function () {
     'use strict';
@@ -95,62 +96,12 @@
         return d.innerHTML;
     }
 
-    /* ============================================================
-       Elementos
-       ============================================================ */
-    var bootEl = document.getElementById('boot');
-    var dashboard = document.getElementById('dashboard');
-    var heroCard = document.getElementById('hero-card');
-    var cardGrid = document.getElementById('card-grid');
-    var quickBar = document.getElementById('quick-bar');
-
-    /* ============================================================
-       Secuencia de arranque — solo mensajes de sistema, nada que
-       requiera escribir ni ninguna clave.
-       ============================================================ */
-    var BOOT_LINES = [
-        ['[    0.000000] ', 'k-dim', 'Booting AlexanderOS 6.6.0-portfolio'],
-        ['[    0.041823] ', 'k-dim', 'Loading modules: red, ciberseguridad, raspberrypi ... ', 'k-ok', 'OK'],
-        ['[    0.183021] ', 'k-dim', 'Mounting /home/' + USER + ' ... ', 'k-ok', 'OK'],
-        ['[    0.512077] ', 'k-dim', 'Starting network manager ... ', 'k-ok', 'OK'],
-        ['[    0.734410] ', 'k-dim', 'Starting portfolio.service ... ', 'k-ok', 'OK'],
-        ['[    0.921003] ', 'k-dim', 'Acceso automatico como ' + USER + ' ... ', 'k-ok', 'OK']
-    ];
-
-    function renderBootLine(parts) {
-        var p = document.createElement('p');
-        p.className = 'line';
-        for (var i = 0; i < parts.length; i += 2) {
-            var span = document.createElement('span');
-            span.className = parts[i + 1] || '';
-            span.textContent = parts[i];
-            p.appendChild(span);
-        }
-        bootEl.appendChild(p);
+    function card(label, bodyHtml, extraClass) {
+        return '<section class="card ' + (extraClass || '') + '">' +
+            '<div class="card-head">' + label + '</div>' +
+            '<div class="card-body">' + bodyHtml + '</div>' +
+            '</section>';
     }
-
-    function runBoot() {
-        if (reduced) {
-            BOOT_LINES.forEach(renderBootLine);
-            revealAll();
-            return;
-        }
-        var i = 0;
-        (function step() {
-            if (i >= BOOT_LINES.length) {
-                setTimeout(revealAll, 200);
-                return;
-            }
-            renderBootLine(BOOT_LINES[i]);
-            i++;
-            setTimeout(step, 90 + Math.random() * 120);
-        })();
-    }
-
-    /* ============================================================
-       Panel de presentación: hero (neofetch) + tarjetas.
-       Se revela solo, automáticamente, sin ninguna interacción.
-       ============================================================ */
 
     function neofetchHTML() {
         var logo = [
@@ -215,68 +166,19 @@
         return rows + links;
     }
 
-    function revealAll() {
-        heroCard.innerHTML = neofetchHTML();
-        cardGrid.innerHTML =
-            card('about', 'about', DATA.about.map(escapeHtml).join('<br>')) +
-            card('skills', 'skills', DATA.skills.map(escapeHtml).join('<br>')) +
-            card('certifications', 'certifications', certsCardHTML()) +
-            card('projects', 'projects', projectsCardHTML(), 'wide') +
-            card('contact', 'contact', contactCardHTML());
-
-        dashboard.classList.remove('hidden');
-        quickBar.classList.remove('hidden');
-        playSfx('reveal');
-
-        if (reduced) {
-            heroCard.classList.add('revealed');
-            cardGrid.querySelectorAll('.card').forEach(function (c) { c.classList.add('revealed'); });
-            return;
-        }
-
-        requestAnimationFrame(function () {
-            setTimeout(function () {
-                heroCard.classList.add('revealed');
-                cardGrid.querySelectorAll('.card').forEach(function (c) { c.classList.add('revealed'); });
-            }, 30);
-        });
-
-        function card(id, label, bodyHtml, extraClass) {
-            return '<section class="card ' + (extraClass || '') + '" id="card-' + id + '">' +
-                '<div class="card-head">' + label + '</div>' +
-                '<div class="card-body">' + bodyHtml + '</div>' +
-                '</section>';
-        }
-    }
-
     /* ============================================================
-       Barra de navegación: solo clics, salta a cada tarjeta o
-       dispara una acción (descargar CV, reiniciar la animación).
+       Botón "resume": el único botón que no es un link normal,
+       porque dispara una descarga en vez de navegar.
        ============================================================ */
-    quickBar.addEventListener('click', function (e) {
-        var btn = e.target.closest('button[data-action]');
+    document.addEventListener('click', function (e) {
+        var btn = e.target.closest('button[data-action="resume"]');
         if (!btn) return;
-        var action = btn.getAttribute('data-action');
         playSfx('click');
 
-        if (action === 'resume') {
-            downloadResume();
-        } else if (action === 'reboot') {
-            rebootSequence();
-        } else {
-            var target = document.getElementById('card-' + action);
-            if (target) target.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
-        }
-    });
-
-    function downloadResume() {
         if (!DATA.resumePath) {
-            var btn = quickBar.querySelector('[data-action="resume"]');
-            if (btn) {
-                var original = btn.textContent;
-                btn.textContent = 'aun no hay CV';
-                setTimeout(function () { btn.textContent = original; }, 1800);
-            }
+            var original = btn.textContent;
+            btn.textContent = 'aun no hay CV';
+            setTimeout(function () { btn.textContent = original; }, 1800);
             return;
         }
         var a = document.createElement('a');
@@ -285,21 +187,95 @@
         document.body.appendChild(a);
         a.click();
         a.remove();
-    }
+    });
 
-    function rebootSequence() {
-        dashboard.classList.add('hidden');
-        quickBar.classList.add('hidden');
-        heroCard.classList.remove('revealed');
-        heroCard.innerHTML = '';
-        cardGrid.innerHTML = '';
-        bootEl.innerHTML = '';
-        window.scrollTo({ top: 0, behavior: 'auto' });
-        runBoot();
+    document.querySelectorAll('.quick-bar a').forEach(function (a) {
+        a.addEventListener('click', function () { playSfx('click'); });
+    });
+
+    function revealCards() {
+        var grid = document.getElementById('card-grid');
+        if (!grid) return;
+        requestAnimationFrame(function () {
+            setTimeout(function () {
+                grid.querySelectorAll('.card').forEach(function (c) { c.classList.add('revealed'); });
+            }, reduced ? 0 : 60);
+        });
     }
 
     /* ============================================================
-       Arranque
+       Página de inicio: arranque + panel de specs.
        ============================================================ */
-    runBoot();
+    var bootEl = document.getElementById('boot');
+
+    if (bootEl) {
+        var heroCard = document.getElementById('hero-card');
+        var quickBar = document.getElementById('quick-bar');
+
+        var BOOT_LINES = [
+            ['[    0.000000] ', 'k-dim', 'Booting AlexanderOS 6.6.0-portfolio'],
+            ['[    0.041823] ', 'k-dim', 'Loading modules: red, ciberseguridad, raspberrypi ... ', 'k-ok', 'OK'],
+            ['[    0.183021] ', 'k-dim', 'Mounting /home/' + USER + ' ... ', 'k-ok', 'OK'],
+            ['[    0.512077] ', 'k-dim', 'Starting network manager ... ', 'k-ok', 'OK'],
+            ['[    0.734410] ', 'k-dim', 'Starting portfolio.service ... ', 'k-ok', 'OK'],
+            ['[    0.921003] ', 'k-dim', 'Acceso automatico como ' + USER + ' ... ', 'k-ok', 'OK']
+        ];
+
+        function renderBootLine(parts) {
+            var p = document.createElement('p');
+            p.className = 'line';
+            for (var i = 0; i < parts.length; i += 2) {
+                var span = document.createElement('span');
+                span.className = parts[i + 1] || '';
+                span.textContent = parts[i];
+                p.appendChild(span);
+            }
+            bootEl.appendChild(p);
+        }
+
+        function revealHome() {
+            heroCard.innerHTML = neofetchHTML();
+            quickBar.classList.remove('hidden');
+            playSfx('reveal');
+            if (reduced) { heroCard.classList.add('revealed'); return; }
+            requestAnimationFrame(function () {
+                setTimeout(function () { heroCard.classList.add('revealed'); }, 30);
+            });
+        }
+
+        if (reduced) {
+            BOOT_LINES.forEach(renderBootLine);
+            revealHome();
+        } else {
+            var i = 0;
+            (function step() {
+                if (i >= BOOT_LINES.length) { setTimeout(revealHome, 200); return; }
+                renderBootLine(BOOT_LINES[i]);
+                i++;
+                setTimeout(step, 90 + Math.random() * 120);
+            })();
+        }
+    }
+
+    /* ============================================================
+       Páginas internas: cada una rellena su propia tarjeta según
+       el atributo data-page del <body>.
+       ============================================================ */
+    var page = document.body.getAttribute('data-page');
+    var grid = document.getElementById('card-grid');
+
+    if (grid && page) {
+        if (page === 'about') {
+            grid.innerHTML =
+                card('about', DATA.about.map(escapeHtml).join('<br>')) +
+                card('skills', DATA.skills.map(escapeHtml).join('<br>'));
+        } else if (page === 'projects') {
+            grid.innerHTML = card('projects', projectsCardHTML(), 'wide');
+        } else if (page === 'certifications') {
+            grid.innerHTML = card('certifications', certsCardHTML());
+        } else if (page === 'contact') {
+            grid.innerHTML = card('contact', contactCardHTML());
+        }
+        revealCards();
+    }
 })();
