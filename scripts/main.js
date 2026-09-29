@@ -20,7 +20,7 @@
             'Estudiando Ciberseguridad en ISIL. Antes: Computacion e Informatica',
             '(Cibertec) y Diseno y Desarrollo de Videojuegos (Toulouse Lautrec).',
             '',
-            '4+ anos trabajando con datos en entornos corporativos: depuracion de',
+            '4+ años trabajando con datos en entornos corporativos: depuracion de',
             'bases, reportes, control de calidad y automatizacion de procesos.',
             '',
             'Ahora apunto a mesa de ayuda, operaciones TI y analisis junior de',
@@ -129,7 +129,7 @@
                 '<div class="specs">' +
                     row('OS', 'AlexanderOS 6.6.0-portfolio') +
                     row('Host', HOST) +
-                    row('Uptime', '4+ anos en TI y datos') +
+                    row('Uptime', '4+ años en BackOffice y Base de datos') +
                     row('Estudios', 'Ciberseguridad, ISIL') +
                     row('Certs', DATA.certifications.length + ' instaladas') +
                     row('Skills', 'Linux, Redes, Seguridad, Raspberry Pi') +
